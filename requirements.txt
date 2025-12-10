@@ -1,0 +1,19 @@
+# Python dependencies for Gibbs Phenomenon Visualizer
+
+# Core scientific computing
+numpy>=1.21.0
+pandas>=1.3.0
+
+# Visualization
+matplotlib>=3.5.0
+cartopy>=0.21.0
+
+# Spherical harmonics
+pyshtools>=4.10.0
+
+# Geometry operations
+shapely>=2.0.0
+
+# Additional dependencies (automatically installed with above)
+# scipy>=1.7.0
+# pyproj>=3.3.0
