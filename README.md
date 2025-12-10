@@ -2,7 +2,7 @@
 
 A Python tool for visualizing the **Gibbs phenomenon** (ringing artifacts) in spherical harmonic reconstructions of geographical boundaries. This tool demonstrates how truncating spherical harmonic series at different degrees affects the reconstruction quality of country boundaries.
 
-## 🌍 Overview
+## Overview
 
 The Gibbs phenomenon occurs when approximating a discontinuous function (like a country boundary mask) using a finite number of spherical harmonics. This creates characteristic "ringing" oscillations near sharp edges. This tool:
 
@@ -12,7 +12,7 @@ The Gibbs phenomenon occurs when approximating a discontinuous function (like a 
 - Visualizes ringing artifacts at different truncation degrees (Lmax = 30, 60, 120, 180)
 - Generates both regional (zoomed) and global visualizations
 
-## 📊 Example Output
+## Example Output
 
 The tool generates three types of visualizations:
 
@@ -20,12 +20,8 @@ The tool generates three types of visualizations:
 2. **2D Regional View** - Zoomed comparison of original vs reconstructions
 3. **2D Global View** - Full Earth visualization showing how ringing artifacts spread globally
 
-## 🚀 Installation
+## Installation
 
-### Prerequisites
-
-- Python 3.9+
-- pip
 
 ### Setup
 
@@ -46,7 +42,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## 📖 Usage
+## Usage
 
 ### Quick Start with KML Files
 
