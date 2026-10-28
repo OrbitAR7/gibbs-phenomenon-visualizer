@@ -1,189 +1,56 @@
-# Gibbs Phenomenon Visualizer
+# gibbs-phenomenon-visualizer
 
-A Python tool for visualizing the **Gibbs phenomenon** (ringing artifacts) in spherical harmonic reconstructions of geographical boundaries. This tool demonstrates how truncating spherical harmonic series at different degrees affects the reconstruction quality of country boundaries.
+Visualizes **Gibbs ringing** when a sharp-edged regional mask, here a country boundary, is expanded in spherical harmonics and truncated at different maximum degrees.
 
-## Overview
+This matters in satellite geodesy. GRACE/GRACE-FO gravity solutions are band-limited spherical-harmonic fields, so estimating mass change over a basin or country means multiplying a smooth field by a sharp mask. Truncation then produces ringing and **leakage** of signal across the boundary. This tool makes that effect visible for any boundary in a KML file.
 
-The Gibbs phenomenon occurs when approximating a discontinuous function (like a country boundary mask) using a finite number of spherical harmonics. This creates characteristic "ringing" oscillations near sharp edges. This tool:
+<img width="2539" height="751" alt="Saudi Arabia mask and its spherical-harmonic reconstructions" src="https://github.com/user-attachments/assets/3c022053-c1c3-41b7-98d5-3fa0cdbf03a1" />
+<img width="2985" height="865" alt="Global view of ringing for the Saudi Arabia mask" src="https://github.com/user-attachments/assets/c8e162c1-8d77-438b-ac38-ac754f363335" />
+<img width="2386" height="1507" alt="Profiles across the boundary at several truncation degrees" src="https://github.com/user-attachments/assets/94516661-ea5c-4eca-8b26-7c3cdb0ca062" />
 
-- Converts KML boundary files to XYZ format
-- Creates high-resolution masks from boundary polygons
-- Performs spherical harmonic analysis
-- Visualizes ringing artifacts at different truncation degrees (Lmax = 30, 60, 120, 180)
-- Generates both regional (zoomed) and global visualizations
+## How it works
 
-## Example Output
+1. **Boundary → mask.** Parse the KML polygon and rasterize it into a 1/0 mask on a regional grid (vectorized point-in-polygon with `shapely`).
+2. **Regional → global grid.** Place the mask on a global 0.5° Driscoll–Healy grid (360 × 720).
+3. **Analysis.** Expand with `pyshtools.expand.SHExpandDH`. This grid supports degrees up to 179.
+4. **Synthesis.** Reconstruct with coefficients truncated at L<sub>max</sub> = 30, 60, 120 and the full expansion.
+5. **Plots.** Profiles across the boundary, regional 2-D maps, and a global map showing how far the ringing spreads.
 
-The tool generates three types of visualizations:
+## What to look for
 
-1. **1D Line Plots** - Cross-sectional slices showing ringing at different degrees
-2. **2D Regional View** - Zoomed comparison of original vs reconstructions
-3. **2D Global View** - Full Earth visualization showing how ringing artifacts spread globally
+- The overshoot at the edge stays at roughly 9% of the jump however high L<sub>max</sub> goes. Raising the degree narrows the ringing toward the boundary but does not remove it.
+- At low degree (L<sub>max</sub> = 30, roughly 670 km half-wavelength), oscillations extend far outside the region, which is the leakage problem in basin averages.
+- Smoothing filters (e.g., Gaussian) trade ringing for blur. That trade-off is the next thing to add (see below).
 
-## Installation
+## Quick start
 
-
-### Setup
-
-1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/gibbs-phenomenon-visualizer.git
+git clone https://github.com/OrbitAR7/gibbs-phenomenon-visualizer.git
 cd gibbs-phenomenon-visualizer
+pip install -r requirements.txt        # numpy, matplotlib, cartopy, pyshtools, shapely, pandas
+
+python kml_analyzer.py data/Saudi_Arabia.kml
+python kml_analyzer.py data/India.kml --save-data
 ```
 
-2. Create a virtual environment (recommended):
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+Figures are written to `output/`. `gibbs_visualizer.py` does the same starting from an XYZ boundary file (`python gibbs_visualizer.py boundary.xyz --country "Name"`).
 
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+| Option | Default | Meaning |
+|---|---|---|
+| `--resolution` | 0.25 | Regional mask grid spacing in degrees. Smaller values give finer masks but run slower |
+| `--output-dir` | `output` | Where figures go |
+| `--save-data` | off | Also save the mask, SH coefficients (`.npy`) and metadata (`.json`) |
 
-## Usage
+## Limitations and next steps
 
-### Quick Start with KML Files
+- The spherical-harmonic step always runs on the 0.5° global grid, so `--resolution` refines only the regional mask that is mapped onto it.
+- The mask is a pure indicator (1 inside, 0 outside). It doesn't yet weight by area or apply ocean/land separation.
+- Planned: Gaussian and other smoothing filters, a leakage estimate (the fraction of the mask's energy outside the boundary vs. L<sub>max</sub>), and a comparison against a synthetic GRACE-like mass-change signal.
 
-The easiest way to analyze a country boundary:
+## Built with
 
-```bash
-python kml_analyzer.py "kml files/Saudi_Arabia.kml"
-```
+[SHTOOLS / pyshtools](https://shtools.github.io/SHTOOLS/) · [Cartopy](https://scitools.org.uk/cartopy/) · [Shapely](https://shapely.readthedocs.io/)
 
-This will:
-- Convert the KML file to XYZ format
-- Create boundary mask
-- Compute spherical harmonics
-- Generate all visualizations in the `output/` folder
+## License
 
-### Using Pre-existing XYZ Files
-
-If you already have an XYZ boundary file:
-
-```bash
-python gibbs_visualizer.py boundary.xyz --country "Country Name"
-```
-
-### Command-Line Options
-
-#### kml_analyzer.py
-```bash
-python kml_analyzer.py <kml_file> [OPTIONS]
-
-Options:
-  --output-dir DIR       Output directory (default: output)
-  --save-data           Save analysis data (.npy, .json)
-  --resolution FLOAT    Grid resolution in degrees (default: 0.25)
-```
-
-#### gibbs_visualizer.py
-```bash
-python gibbs_visualizer.py <xyz_file> [OPTIONS]
-
-Options:
-  --country NAME        Country/Region name (default: Region)
-  --output-dir DIR      Output directory (default: output)
-  --save-data          Save analysis data (.npy, .json)
-  --resolution FLOAT    Grid resolution in degrees (default: 0.25)
-```
-
-## 📁 Examples
-
-Analyze multiple countries:
-
-```bash
-# Saudi Arabia
-python kml_analyzer.py "kml files/Saudi_Arabia.kml"
-
-# India
-python kml_analyzer.py "kml files/India.kml"
-```
-
-Save analysis data for later use:
-
-```bash
-python kml_analyzer.py "kml files/Saudi_Arabia.kml" --save-data
-```
-
-Use custom resolution (higher = more detail, slower):
-
-```bash
-python kml_analyzer.py "kml files/Saudi_Arabia.kml" --resolution 0.1
-```
-
-## Scientific Background
-
-### What is the Gibbs Phenomenon?
-
-The Gibbs phenomenon is an overshoot (ringing) that occurs when approximating a discontinuous function with a Fourier series or spherical harmonics. Key characteristics:
-
-- **Overshoot**: ~9% of the jump discontinuity
-- **Frequency**: Oscillations increase with higher truncation degree
-- **Persistence**: Does not disappear as degree increases, only becomes more concentrated near the discontinuity
-
-### Spherical Harmonics
-
-Spherical harmonics are the basis functions for representing functions on a sphere, analogous to Fourier series for periodic functions. They are widely used in:
-
-- Geophysics (gravity and magnetic field modeling)
-- Climate science (global temperature/pressure fields)
-- Geodesy (Earth's shape and gravity)
-- Computer graphics (lighting and environment mapping)
-
-### Truncation Effects
-
-This tool demonstrates how different truncation degrees (Lmax) affect reconstruction:
-
-- **Lmax = 30**: Strong ringing, visible global artifacts
-- **Lmax = 60**: Moderate ringing, oscillations still prominent
-- **Lmax = 120**: Reduced ringing, better boundary definition
-- **Lmax = 180**: Minimal ringing, accurate reconstruction
-
-## Technical Details
-
-### Algorithm
-
-1. **Boundary Loading**: Parse KML files to extract polygon coordinates
-2. **Mask Creation**: Generate binary mask on regular lat/lon grid (1 inside, 0 outside)
-3. **Global Mapping**: Map regional mask to global grid (required for spherical harmonics)
-4. **SH Expansion**: Compute spherical harmonic coefficients using `SHExpandDH` (sampling=2)
-5. **SH Synthesis**: Reconstruct at different degrees using `MakeGridDH`
-6. **Visualization**: Generate 1D slices and 2D maps (regional + global)
-
-### Grid Resolution
-
-- Default: 0.25° (~28 km at equator)
-- Adjustable via `--resolution` parameter
-- Higher resolution = more accurate but slower
-
-### Performance Optimizations
-
-- Vectorized point-in-polygon testing using `shapely.prepared`
-- Efficient grid mapping with NumPy operations
-- Parallel-ready design (can be extended)
-
-## Output Files
-
-### Visualization Files
-- `gibbs_comparison_1d_<country>.png` - Line plots at 4 degrees
-- `gibbs_comparison_2d_<country>.png` - Regional 2D comparison
-- `gibbs_comparison_2d_global_<country>.png` - Global 2D comparison
-
-### Data Files (with --save-data)
-- `<country>_mask.npy` - Regional boundary mask
-- `<country>_clm_coefficients.npy` - Spherical harmonic coefficients
-- `<country>_metadata.json` - Analysis metadata
-
-### Output Example
-<img width="2539" height="751" alt="gibbs_comparison_2d_saudi_arabia" src="https://github.com/user-attachments/assets/3c022053-c1c3-41b7-98d5-3fa0cdbf03a1" />
-<img width="2985" height="865" alt="gibbs_comparison_2d_global_saudi_arabia" src="https://github.com/user-attachments/assets/c8e162c1-8d77-438b-ac38-ac754f363335" />
-<img width="2386" height="1507" alt="gibbs_comparison_1d_saudi_arabia" src="https://github.com/user-attachments/assets/94516661-ea5c-4eca-8b26-7c3cdb0ca062" />
-
-
-## Acknowledgments
-
-- Built using [SHTOOLS](https://shtools.github.io/SHTOOLS/) for spherical harmonic transformations
-- Cartographic visualizations powered by [Cartopy](https://scitools.org.uk/cartopy/)
-
+MIT. See `LICENSE`.
